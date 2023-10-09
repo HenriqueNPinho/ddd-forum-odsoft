@@ -1,0 +1,27 @@
+plugins {
+  id "com.github.node-gradle.node" version "7.0.0"
+}
+
+// Installs the project's dependencies 
+task install_dependencies(type: Exec) {
+  if (System.properties['os.name'].toLowerCase().contains('windows')) {
+    commandLine 'npm.cmd', 'install'
+  } else {
+      commandLine 'npm', 'install'
+  }
+}
+
+
+// Deletes the current ./dist folder, removing all it's files
+task delete_dist(type: Delete) {
+    delete 'dist'
+}
+
+task transpile_project(type: Exec) {
+    commandLine 'node', 'node_modules/typescript/bin/tsc', '-p', '.'
+}
+
+// Builds the project
+task run_build(type: DefaultTask) {
+    dependsOn delete_dist, transpile_project
+}
