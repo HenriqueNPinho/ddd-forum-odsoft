@@ -1,0 +1,22 @@
+@startuml
+actor User
+participant Server
+participant Database
+
+User -> Server: Send request to server
+Server -> Server: Verify auth
+alt token is valid?
+    Server -> Database: Get data from DB
+
+    alt Get data from DB succeeded?
+    else yes
+        Database -> Server: Return requested data
+        Server -> User: Return requested data
+    else no
+        Server -> User: Return error message
+    end
+
+else token is invalid
+    Server -> User: Return error message of invalid authentication
+end
+@enduml
