@@ -2,6 +2,7 @@ plugins {
   id "com.github.node-gradle.node" version "7.0.0"
 }
 
+// ****************************** Build ******************************
 // Installs the project's dependencies 
 task install_dependencies(type: Exec) {
   if (System.properties['os.name'].toLowerCase().contains('windows')) {
@@ -10,18 +11,60 @@ task install_dependencies(type: Exec) {
       commandLine 'npm', 'install'
   }
 }
-
-
 // Deletes the current ./dist folder, removing all it's files
 task delete_dist(type: Delete) {
     delete 'dist'
 }
-
+// Transpiles the project to JavaScript
 task transpile_project(type: Exec) {
     commandLine 'node', 'node_modules/typescript/bin/tsc', '-p', '.'
 }
-
 // Builds the project
 task run_build(type: DefaultTask) {
     dependsOn delete_dist, transpile_project
+}
+
+
+// *************************** Docker Setup ***************************
+// Optional env copy from template
+task copyEnv(type: Copy) {
+    from './.env.template'
+    into '.'
+    include '.*'
+    rename { fileName ->
+        fileName.replace('.env.template', '.env')
+    }
+}
+// Compoeses the project on docker
+task compose(type: Exec) {
+  commandLine 'docker-compose', 'up'
+}
+
+
+// *************************** Backend Setup ***************************
+// Database creation steps
+task create_db(type: Exec) {
+    commandLine 'npm.cmd', 'run', 'db:create:dev'
+}
+task migrate(type: Exec) {
+    commandLine 'npm.cmd', 'run', 'migrate:dev'
+}
+// Create the database
+task create_database(type: DefaultTask) {
+    dependsOn create_db, migrate
+}
+// Run the backend
+task run_backend(type: Exec) {
+    commandLine 'npm.cmd', 'run', 'start:dev'
+}
+
+
+// **************************** Quick Runs ****************************
+// Quick app setup
+task setup(type: Exec) {
+    commandLine 'npm.cmd', 'run', 'setup:dev'
+}
+// Quick app start
+task start(type: Exec) {
+    commandLine 'npm.cmd', 'run', 'start:both'
 }
