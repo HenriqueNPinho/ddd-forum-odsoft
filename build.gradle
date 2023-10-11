@@ -43,14 +43,17 @@ task compose(type: Exec) {
 
 // *************************** Backend Setup ***************************
 // Database creation steps
+task delete_db(type: Exec) {
+    commandLine 'npm.cmd', 'run', 'db:delete:dev'
+}
 task create_db(type: Exec) {
     commandLine 'npm.cmd', 'run', 'db:create:dev'
 }
 task migrate(type: Exec) {
     commandLine 'npm.cmd', 'run', 'migrate:dev'
 }
-// Create the database
-task create_database(type: DefaultTask) {
+// Set up the database
+task set_db(type: DefaultTask) {
     dependsOn create_db, migrate
 }
 // Run the backend
@@ -58,6 +61,29 @@ task run_backend(type: Exec) {
     commandLine 'npm.cmd', 'run', 'start:dev'
 }
 
+
+// **************************** Test Runs *****************************
+//  Execute the Unit Tests
+task run_unit_test(type: Exec) {
+    commandLine 'npm.cmd', 'run', 'test', '--', '--testPathIgnorePatterns=api'
+}
+task run_unit_test_coverage(type: Exec) {
+    commandLine 'npm.cmd', 'run', 'testWithCoverage', '--', '--testPathIgnorePatterns=api'
+}
+//  Execute the API Tests
+task api_test(type: Exec) {
+    commandLine 'npm.cmd', 'run', 'test', '--runInBand --testPathPattern=api'
+}
+task api_test_coverage(type: Exec) {
+    commandLine 'npm.cmd', 'run', 'testWithCoverage', '--runInBand --testPathPattern=api'
+}
+//  Execute the API Tests with database setup
+task run_api_test(type: DefaultTask) {
+    dependsOn delete_db, set_db, api_test
+}
+task run_api_test_coverage(type: DefaultTask) {
+    dependsOn delete_db, set_db, api_test_coverage
+}
 
 // **************************** Quick Runs ****************************
 // Quick app setup
