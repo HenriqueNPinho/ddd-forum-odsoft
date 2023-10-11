@@ -1,32 +1,28 @@
 plugins {
-  id "com.github.node-gradle.node" version "7.0.0"
+    id "com.github.node-gradle.node" version "7.0.0"
 }
 
+def isWindows = System.properties['os.name'].toLowerCase().contains('windows')
+def npmCommand = isWindows ? 'npm.cmd' : 'npm'
+
 // ****************************** Build ******************************
-// Installs the project's dependencies 
 task install_dependencies(type: Exec) {
-  if (System.properties['os.name'].toLowerCase().contains('windows')) {
-    commandLine 'npm.cmd', 'install'
-  } else {
-      commandLine 'npm', 'install'
-  }
+    commandLine npmCommand, 'install'
 }
-// Deletes the current ./dist folder, removing all it's files
+
 task delete_dist(type: Delete) {
     delete 'dist'
 }
-// Transpiles the project to JavaScript
+
 task transpile_project(type: Exec) {
     commandLine 'node', 'node_modules/typescript/bin/tsc', '-p', '.'
 }
-// Builds the project
+
 task run_build(type: DefaultTask) {
     dependsOn delete_dist, transpile_project
 }
 
-
 // *************************** Docker Setup ***************************
-// Optional env copy from template
 task copyEnv(type: Copy) {
     from './.env.template'
     into '.'
@@ -35,62 +31,60 @@ task copyEnv(type: Copy) {
         fileName.replace('.env.template', '.env')
     }
 }
-// Compoeses the project on docker
-task compose(type: Exec) {
-  commandLine 'docker-compose', 'up'
-}
 
+task compose(type: Exec) {
+    commandLine 'docker-compose', 'up'
+}
 
 // *************************** Backend Setup ***************************
-// Database creation steps
 task delete_db(type: Exec) {
-    commandLine 'npm.cmd', 'run', 'db:delete:dev'
+    commandLine npmCommand, 'run', 'db:delete:dev'
 }
+
 task create_db(type: Exec) {
-    commandLine 'npm.cmd', 'run', 'db:create:dev'
+    commandLine npmCommand, 'run', 'db:create:dev'
 }
+
 task migrate(type: Exec) {
-    commandLine 'npm.cmd', 'run', 'migrate:dev'
+    commandLine npmCommand, 'run', 'migrate:dev'
 }
-// Set up the database
+
 task set_db(type: DefaultTask) {
     dependsOn create_db, migrate
 }
-// Run the backend
+
 task run_backend(type: Exec) {
-    commandLine 'npm.cmd', 'run', 'start:dev'
+    commandLine npmCommand, 'run', 'start:dev'
 }
 
+// **************************** Test Setup *****************************
+// Refresh the test database
+task refresh_database(type: Exec){
+    dependsOn delete_db
+    commandLine npmCommand, 'run', 'db:create:dev'
+}
+// Migrate new database for testing
+task api_test_set(type: Exec) {
+    dependsOn refresh_database
+    commandLine npmCommand, 'run', 'migrate:dev'
+}
 
 // **************************** Test Runs *****************************
-//  Execute the Unit Tests
+// Run unit tests
 task run_unit_test(type: Exec) {
-    commandLine 'npm.cmd', 'run', 'test', '--', '--testPathIgnorePatterns=api'
+    commandLine npmCommand, 'run', 'test', '--', '--testPathIgnorePatterns=api'
 }
+// Run unit tests with coverage
 task run_unit_test_coverage(type: Exec) {
-    commandLine 'npm.cmd', 'run', 'testWithCoverage', '--', '--testPathIgnorePatterns=api'
+    commandLine npmCommand, 'run', 'testWithCoverage', '--', '--testPathIgnorePatterns=api'
 }
-//  Execute the API Tests
-task api_test(type: Exec) {
-    commandLine 'npm.cmd', 'run', 'test', '--runInBand --testPathPattern=api'
+// Run api tests
+task run_api_test(type: Exec) {
+    dependsOn api_test_set
+    commandLine 'npm.cmd', 'run', 'test', '--', '--testPathPattern=api'
 }
-task api_test_coverage(type: Exec) {
-    commandLine 'npm.cmd', 'run', 'testWithCoverage', '--runInBand --testPathPattern=api'
-}
-//  Execute the API Tests with database setup
-task run_api_test(type: DefaultTask) {
-    dependsOn delete_db, set_db, api_test
-}
-task run_api_test_coverage(type: DefaultTask) {
-    dependsOn delete_db, set_db, api_test_coverage
-}
-
-// **************************** Quick Runs ****************************
-// Quick app setup
-task setup(type: Exec) {
-    commandLine 'npm.cmd', 'run', 'setup:dev'
-}
-// Quick app start
-task start(type: Exec) {
-    commandLine 'npm.cmd', 'run', 'start:both'
+// Run api tests with coverage
+task run_api_test_coverage(type: Exec) {
+    dependsOn api_test_set
+    commandLine npmCommand, 'run', 'testWithCoverage', '--', '--testPathPattern=api'
 }
