@@ -1,28 +1,65 @@
+/**
+ * Defines the plugins for the Gradle build.
+ * @type {object}
+ */
 plugins {
     id "com.github.node-gradle.node" version "7.0.0"
 }
-
+/**
+ * Flag indicating if the operating system is Windows.
+ * @type {boolean}
+ */
 def isWindows = System.properties['os.name'].toLowerCase().contains('windows')
+/**
+ * NPM command based on the operating system.
+ * @type {string}
+ */
 def npmCommand = isWindows ? 'npm.cmd' : 'npm'
 
 // ****************************** Build ******************************
+/**
+ * Task to install package.json dependencies.
+ * @type {Exec}
+ */
 task install_dependencies(type: Exec) {
     commandLine npmCommand, 'install'
 }
-
+/**
+ * Task to delete the compiled project folder.
+ * @type {Delete}
+ */
 task delete_dist(type: Delete) {
     delete 'dist'
 }
-
+/**
+ * Task to transpile the project into JavaScript.
+ * @type {Exec}
+ */
 task transpile_project(type: Exec) {
     commandLine 'node', 'node_modules/typescript/bin/tsc', '-p', '.'
 }
-
+/**
+ * Task to start the backend.
+ * @type {DefaultTask}
+ */
 task run_build(type: DefaultTask) {
     dependsOn delete_dist, transpile_project
 }
 
+// ************************** Documentation ****************************
+/**
+ * Task to generate JSDoc.
+ * @type {Exec}
+ */
+task generate_docs(type: Exec){
+    commandLine 'node', 'node_modules/jsdoc/jsdoc.js', '-r', '-c', 'jsdoc.config.json'
+}
+
 // *************************** Docker Setup ***************************
+/**
+ * Task to alter the .env folder.
+ * @type {Copy}
+ */
 task copyEnv(type: Copy) {
     from './.env.template'
     into '.'
@@ -31,59 +68,96 @@ task copyEnv(type: Copy) {
         fileName.replace('.env.template', '.env')
     }
 }
-
+/**
+ * Task to compose dockerfile.
+ * @type {Exec}
+ */
 task compose(type: Exec) {
     commandLine 'docker-compose', 'up'
 }
 
 // *************************** Backend Setup ***************************
+/**
+ * Task to delete the database, used for test setups.
+ * @type {Exec}
+ */
 task delete_db(type: Exec) {
     commandLine npmCommand, 'run', 'db:delete:dev'
 }
-
+/**
+ * Task to create the database.
+ * @type {Exec}
+ */
 task create_db(type: Exec) {
     commandLine npmCommand, 'run', 'db:create:dev'
 }
-
+/**
+ * Task to migrate the database.
+ * @type {Exec}
+ */
 task migrate(type: Exec) {
     commandLine npmCommand, 'run', 'migrate:dev'
 }
-
+/**
+ * Task to set up the database for usage.
+ * @type {DefaultTask}
+ */
 task set_db(type: DefaultTask) {
     dependsOn create_db, migrate
 }
-
+/**
+ * Task to run the application's backend.
+ * @type {Exec}
+ */
 task run_backend(type: Exec) {
     commandLine npmCommand, 'run', 'start:dev'
 }
 
 // **************************** Test Setup *****************************
-// Refresh the test database
-task refresh_database(type: Exec){
+/**
+ * Task to refresh the test database.
+ * @type {Exec}
+ */
+task refresh_database(type: Exec) {
     dependsOn delete_db
     commandLine npmCommand, 'run', 'db:create:dev'
 }
-// Migrate new database for testing
+/**
+ * Task to migrate new database for testing.
+ * @type {Exec}
+ */
 task api_test_set(type: Exec) {
     dependsOn refresh_database
     commandLine npmCommand, 'run', 'migrate:dev'
 }
 
 // **************************** Test Runs *****************************
-// Run unit tests
+/**
+ * Task to run unit tests.
+ * @type {Exec}
+ */
 task run_unit_test(type: Exec) {
     commandLine npmCommand, 'run', 'test', '--', '--testPathIgnorePatterns=api'
 }
-// Run unit tests with coverage
+/**
+ * Task to run unit tests with coverage.
+ * @type {Exec}
+ */
 task run_unit_test_coverage(type: Exec) {
     commandLine npmCommand, 'run', 'testWithCoverage', '--', '--testPathIgnorePatterns=api'
 }
-// Run api tests
+/**
+ * Task to run API tests.
+ * @type {Exec}
+ */
 task run_api_test(type: Exec) {
     dependsOn api_test_set
     commandLine 'npm.cmd', 'run', 'test', '--', '--testPathPattern=api'
 }
-// Run api tests with coverage
+/**
+ * Task to run API tests with coverage.
+ * @type {Exec}
+ */
 task run_api_test_coverage(type: Exec) {
     dependsOn api_test_set
     commandLine npmCommand, 'run', 'testWithCoverage', '--', '--testPathPattern=api'
