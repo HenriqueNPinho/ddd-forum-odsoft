@@ -14,8 +14,8 @@ function genPUMListPopular() {
       // The object { stdio: 'inherit' } is used to display the output of the command in the console
       execSync('npm install node-plantuml', { stdio: 'inherit' });
 
-      var gen = plantuml.generate("docs/plantUML/listPopular.puml", {format: 'svg'});
-      gen.out.pipe(fs.createWriteStream("images/list-popular.svg"));
+      var gen = plantuml.generate("docs/plantUML/listPopular.puml", {format: 'png'});
+      gen.out.pipe(fs.createWriteStream("images/list-popular.png"));
     } catch (error) {
       console.error(error);
       process.exit(1);
