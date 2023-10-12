@@ -46,7 +46,8 @@ task run_build(type: DefaultTask) {
     dependsOn delete_dist, transpile_project
 }
 
-*******************Generate PUML for ListPopularPosts ***************
+
+//*******************Generate PUML for ListPopularPosts ***************
 
 task generatePopularPosts(type: Exec) {
   commandLine 'node', 'scripts/genPUML/genPUMListPopular.js'
@@ -54,6 +55,7 @@ task generatePopularPosts(type: Exec) {
   doLast {
     println 'PlantUML Sequence Diagram of "List Popular Posts" route generated!'
   }
+}
 
 // ************************** Documentation ****************************
 /**
