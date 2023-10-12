@@ -1,30 +1,52 @@
+/**
+ * Defines the plugins for the Gradle build.
+ * @type {object}
+ */
 plugins {
-  id "com.github.node-gradle.node" version "7.0.0"
+    id "com.github.node-gradle.node" version "7.0.0"
 }
+/**
+ * Flag indicating if the operating system is Windows.
+ * @type {boolean}
+ */
+def isWindows = System.properties['os.name'].toLowerCase().contains('windows')
+/**
+ * NPM command based on the operating system.
+ * @type {string}
+ */
+def npmCommand = isWindows ? 'npm.cmd' : 'npm'
 
-// Installs the project's dependencies 
+// ****************************** Build ******************************
+/**
+ * Task to install package.json dependencies.
+ * @type {Exec}
+ */
 task install_dependencies(type: Exec) {
-  if (System.properties['os.name'].toLowerCase().contains('windows')) {
-    commandLine 'npm.cmd', 'install'
-  } else {
-      commandLine 'npm', 'install'
-  }
+    commandLine npmCommand, 'install'
 }
-
-
-// Deletes the current ./dist folder, removing all it's files
+/**
+ * Task to delete the compiled project folder.
+ * @type {Delete}
+ */
 task delete_dist(type: Delete) {
     delete 'dist'
 }
-
+/**
+ * Task to transpile the project into JavaScript.
+ * @type {Exec}
+ */
 task transpile_project(type: Exec) {
     commandLine 'node', 'node_modules/typescript/bin/tsc', '-p', '.'
 }
-
-// Builds the project
+/**
+ * Task to start the backend.
+ * @type {DefaultTask}
+ */
 task run_build(type: DefaultTask) {
     dependsOn delete_dist, transpile_project
 }
+
+*******************Generate PUML for ListPopularPosts ***************
 
 task generatePopularPosts(type: Exec) {
   commandLine 'node', 'scripts/genPUML/genPUMListPopular.js'
@@ -32,4 +54,121 @@ task generatePopularPosts(type: Exec) {
   doLast {
     println 'PlantUML Sequence Diagram of "List Popular Posts" route generated!'
   }
+
+// ************************** Documentation ****************************
+/**
+ * Task to generate JSDoc.
+ * @type {Exec}
+ */
+task generate_docs(type: Exec){
+    commandLine 'node', 'node_modules/jsdoc/jsdoc.js', '-r', '-c', 'jsdoc.config.json'
+}
+
+// *************************** Docker Setup ***************************
+/**
+ * Task to alter the .env folder.
+ * @type {Copy}
+ */
+task copyEnv(type: Copy) {
+    from './.env.template'
+    into '.'
+    include '.*'
+    rename { fileName ->
+        fileName.replace('.env.template', '.env')
+    }
+}
+/**
+ * Task to compose dockerfile.
+ * @type {Exec}
+ */
+task compose(type: Exec) {
+    commandLine 'docker-compose', 'up'
+}
+
+// *************************** Backend Setup ***************************
+/**
+ * Task to delete the database, used for test setups.
+ * @type {Exec}
+ */
+task delete_db(type: Exec) {
+    commandLine npmCommand, 'run', 'db:delete:dev'
+}
+/**
+ * Task to create the database.
+ * @type {Exec}
+ */
+task create_db(type: Exec) {
+    commandLine npmCommand, 'run', 'db:create:dev'
+}
+/**
+ * Task to migrate the database.
+ * @type {Exec}
+ */
+task migrate(type: Exec) {
+    commandLine npmCommand, 'run', 'migrate:dev'
+}
+/**
+ * Task to set up the database for usage.
+ * @type {DefaultTask}
+ */
+task set_db(type: DefaultTask) {
+    dependsOn create_db, migrate
+}
+/**
+ * Task to run the application's backend.
+ * @type {Exec}
+ */
+task run_backend(type: Exec) {
+    commandLine npmCommand, 'run', 'start:dev'
+}
+
+// **************************** Test Setup *****************************
+/**
+ * Task to refresh the test database.
+ * @type {Exec}
+ */
+task refresh_database(type: Exec) {
+    dependsOn delete_db
+    commandLine npmCommand, 'run', 'db:create:dev'
+}
+/**
+ * Task to migrate new database for testing.
+ * @type {Exec}
+ */
+task api_test_set(type: Exec) {
+    dependsOn refresh_database
+    commandLine npmCommand, 'run', 'migrate:dev'
+}
+
+// **************************** Test Runs *****************************
+/**
+ * Task to run unit tests.
+ * @type {Exec}
+ */
+task run_unit_test(type: Exec) {
+    commandLine npmCommand, 'run', 'test', '--', '--testPathIgnorePatterns=api'
+}
+/**
+ * Task to run unit tests with coverage.
+ * @type {Exec}
+ */
+task run_unit_test_coverage(type: Exec) {
+    commandLine npmCommand, 'run', 'testWithCoverage', '--', '--testPathIgnorePatterns=api'
+}
+/**
+ * Task to run API tests.
+ * @type {Exec}
+ */
+task run_api_test(type: Exec) {
+    dependsOn api_test_set
+    commandLine 'npm.cmd', 'run', 'test', '--', '--testPathPattern=api'
+}
+/**
+ * Task to run API tests with coverage.
+ * @type {Exec}
+ */
+task run_api_test_coverage(type: Exec) {
+    dependsOn api_test_set
+    commandLine npmCommand, 'run', 'testWithCoverage', '--', '--testPathPattern=api'
+
 }
